@@ -23,6 +23,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/google/go-github/v82/github"
@@ -65,6 +66,9 @@ type Client struct {
 	tarball       tarballHandler
 	commitDepth   int
 	gitMode       bool
+	// fileMode decides whether files are fetched with git, see filesViaGit.
+	fileMode *sync.Once
+	useGit   bool
 }
 
 // WithFileModeGit configures the repo client to fetch files using git.
@@ -114,6 +118,8 @@ func (client *Client) InitRepo(inputRepo clients.Repo, commitSHA string, commitD
 		commitSHA:     commitSHA,
 	}
 
+	client.fileMode = new(sync.Once)
+	client.useGit = client.gitMode
 	if client.gitMode {
 		client.git.Init(client.ctx, client.repo.GetCloneURL(), commitSHA)
 	} else {
@@ -169,9 +175,31 @@ func (client *Client) URI() string {
 	return fmt.Sprintf("%s/%s/%s", host, client.repourl.owner, client.repourl.repo)
 }
 
+// filesViaGit reports whether repository files should be fetched using git
+// rather than the tarball. Besides explicitly requested git mode, this is the
+// case for repositories which "export-ignore" files in their .gitattributes,
+// since GitHub leaves those files (often .github/ itself) out of the tarball.
+func (client *Client) filesViaGit() bool {
+	client.fileMode.Do(func() {
+		// The git handler only fetches a shallow clone of the default branch.
+		if client.useGit || !strings.EqualFold(client.repourl.commitSHA, clients.HeadSHA) {
+			return
+		}
+		exportIgnore, err := usesExportIgnore(client.ctx, client.repoClient,
+			client.repourl.owner, client.repourl.repo)
+		if err != nil || !exportIgnore {
+			// Fall back to the tarball, which is complete for most repositories.
+			return
+		}
+		client.useGit = true
+		client.git.Init(client.ctx, client.repo.GetCloneURL(), client.repourl.commitSHA)
+	})
+	return client.useGit
+}
+
 // LocalPath implements RepoClient.LocalPath.
 func (client *Client) LocalPath() (string, error) {
-	if client.gitMode {
+	if client.filesViaGit() {
 		path, err := client.git.GetLocalPath()
 		if err != nil {
 			return "", fmt.Errorf("git local path: %w", err)
@@ -183,7 +211,7 @@ func (client *Client) LocalPath() (string, error) {
 
 // ListFiles implements RepoClient.ListFiles.
 func (client *Client) ListFiles(predicate func(string) (bool, error)) ([]string, error) {
-	if client.gitMode {
+	if client.filesViaGit() {
 		files, err := client.git.ListFiles(predicate)
 		if err != nil {
 			return nil, fmt.Errorf("git listfiles: %w", err)
@@ -195,7 +223,7 @@ func (client *Client) ListFiles(predicate func(string) (bool, error)) ([]string,
 
 // GetFileReader implements RepoClient.GetFileReader.
 func (client *Client) GetFileReader(filename string) (io.ReadCloser, error) {
-	if client.gitMode {
+	if client.filesViaGit() {
 		f, err := client.git.GetFile(filename)
 		if err != nil {
 			return nil, fmt.Errorf("git getfile: %w", err)
@@ -326,7 +354,7 @@ func (client *Client) SearchCommits(request clients.SearchCommitsOptions) ([]cli
 
 // Close implements RepoClient.Close.
 func (client *Client) Close() error {
-	if client.gitMode {
+	if client.useGit {
 		if err := client.git.Cleanup(); err != nil {
 			return fmt.Errorf("git cleanup: %w", err)
 		}

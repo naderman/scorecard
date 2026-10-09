@@ -348,7 +348,8 @@ func WithOpenSSFBestPraticesClient(client clients.CIIBestPracticesClient) Option
 
 // WithFileModeGit will configure supporting repository clients to download files
 // using git. This is useful for repositories which "export-ignore" files in its
-// .gitattributes file.
+// .gitattributes file. The GitHub client already does this automatically when
+// analyzing HEAD of such a repository.
 //
 // Repository analysis may be slower.
 func WithFileModeGit() Option {
