@@ -55,7 +55,7 @@ func Packaging(name string,
 		checker.LogFinding(dl, f, logLevel)
 	}
 	if maxScore {
-		return checker.CreateMaxScoreResult(name, "packaging workflow detected")
+		return checker.CreateMaxScoreResult(name, "packaging workflow or published package detected")
 	}
-	return checker.CreateInconclusiveResult(name, "packaging workflow not detected")
+	return checker.CreateInconclusiveResult(name, "no packaging workflow or published package detected")
 }

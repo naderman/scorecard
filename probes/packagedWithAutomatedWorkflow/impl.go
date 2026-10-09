@@ -47,9 +47,11 @@ func Run(raw *checker.RawResults) ([]finding.Finding, string, error) {
 		}
 		// Presence of a single non-debug message means the
 		// check passes.
-		f, err := finding.NewWith(fs, Probe,
-			"Project packages its releases by way of GitHub Actions.", nil,
-			finding.OutcomeTrue)
+		msg := "Project packages its releases by way of GitHub Actions."
+		if p.Name != nil && *p.Name != "" {
+			msg = fmt.Sprintf("Project is published as package %s.", *p.Name)
+		}
+		f, err := finding.NewWith(fs, Probe, msg, nil, finding.OutcomeTrue)
 		if err != nil {
 			return nil, Probe, fmt.Errorf("create finding: %w", err)
 		}
@@ -68,7 +70,7 @@ func Run(raw *checker.RawResults) ([]finding.Finding, string, error) {
 	}
 
 	f, err := finding.NewWith(fs, Probe,
-		"no GitHub/GitLab publishing workflow detected.", nil,
+		"no GitHub/GitLab publishing workflow or published package detected.", nil,
 		finding.OutcomeFalse)
 	if err != nil {
 		return nil, Probe, fmt.Errorf("create finding: %w", err)

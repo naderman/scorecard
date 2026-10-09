@@ -390,9 +390,9 @@ The probe returns 1 true outcome if the project has no workflows "write" permiss
 
 **Motivation**: Packages give users of a project an easy way to download, install, update, and uninstall the software by a package manager. In particular, they make it easy for users to receive security patches as updates.
 
-**Implementation**: The implementation checks whether a project uses common patterns for packaging across multiple ecosystems. Scorecard gets this by checking the projects workflows for specific uses of actions and build commands such as `docker push` or `mvn deploy`.
+**Implementation**: The implementation checks whether a project uses common patterns for packaging across multiple ecosystems. Scorecard gets this by checking the projects workflows for specific uses of actions and build commands such as `docker push` or `mvn deploy`. Some registries publish directly from the source repository without any workflow, e.g. Packagist publishes every git tag of a PHP project. For these, Scorecard reads the package name from the manifest (`composer.json`) and verifies that the registry publishes it from the project's repository.
 
-**Outcomes**: If the project uses a packaging mechanism we detect, the outcome is positive.
+**Outcomes**: If the project uses a packaging mechanism we detect, or is published on a registry we verify, the outcome is positive.
 If the project doesn't use automated packaging we can detect, the outcome is negative.
 
 

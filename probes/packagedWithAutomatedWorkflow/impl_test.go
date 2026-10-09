@@ -27,6 +27,7 @@ import (
 
 func Test_Run(t *testing.T) {
 	msg := "msg"
+	name := "pkg:composer/composer/composer"
 	t.Parallel()
 	//nolint:govet
 	tests := []struct {
@@ -61,6 +62,24 @@ func Test_Run(t *testing.T) {
 			},
 			outcomes: []finding.Outcome{
 				finding.OutcomeFalse,
+			},
+		},
+		{
+			name: "published package",
+			raw: &checker.RawResults{
+				PackagingResults: checker.PackagingData{
+					Packages: []checker.Package{
+						{
+							Msg: &msg,
+						},
+						{
+							Name: &name,
+						},
+					},
+				},
+			},
+			outcomes: []finding.Outcome{
+				finding.OutcomeTrue,
 			},
 		},
 	}

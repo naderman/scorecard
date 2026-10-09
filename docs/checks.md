@@ -440,8 +440,11 @@ for users to receive security patches as updates.
 The check currently looks for
 [GitHub packaging workflows](https://docs.github.com/en/packages/learn-github-packages/publishing-a-package)
 and language-specific GitHub Actions that upload the package to a corresponding
-hub, e.g., [Npm](https://www.npmjs.com/). We plan to add better support to query
-package manager hubs directly in the future, e.g., for
+hub, e.g., [Npm](https://www.npmjs.com/). For registries which publish directly
+from the source repository, without a workflow, it queries the registry: PHP
+projects with a `composer.json` are detected if [Packagist](https://packagist.org/)
+publishes the package from the project's repository. We plan to add better
+support to query other package manager hubs directly in the future, e.g., for
 [Npm](https://www.npmjs.com/), [PyPi](https://pypi.org/).
 
 You can create a package in several ways:

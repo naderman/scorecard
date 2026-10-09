@@ -19,10 +19,12 @@ import (
 	"github.com/ossf/scorecard/v5/checks/evaluation"
 	"github.com/ossf/scorecard/v5/checks/raw/github"
 	"github.com/ossf/scorecard/v5/checks/raw/gitlab"
+	"github.com/ossf/scorecard/v5/checks/raw/packagist"
 	"github.com/ossf/scorecard/v5/clients/githubrepo"
 	"github.com/ossf/scorecard/v5/clients/gitlabrepo"
 	"github.com/ossf/scorecard/v5/clients/localdir"
 	sce "github.com/ossf/scorecard/v5/errors"
+	"github.com/ossf/scorecard/v5/internal/packageclient"
 	"github.com/ossf/scorecard/v5/probes"
 	"github.com/ossf/scorecard/v5/probes/zrunner"
 )
@@ -71,6 +73,18 @@ func Packaging(c *checker.CheckRequest) checker.CheckResult {
 	if err != nil {
 		e := sce.WithMessage(sce.ErrScorecardInternal, err.Error())
 		return checker.CreateRuntimeErrorResult(CheckPackaging, e)
+	}
+
+	// Registries which publish directly from the repository, without any
+	// workflow. This requires knowing the repository URL, so not for localdir.
+	switch c.RepoClient.(type) {
+	case *githubrepo.Client, *gitlabrepo.Client:
+		rawDataPackagist, err := packagist.Packaging(c, packageclient.CreatePackagistClient())
+		if err != nil {
+			e := sce.WithMessage(sce.ErrScorecardInternal, err.Error())
+			return checker.CreateRuntimeErrorResult(CheckPackaging, e)
+		}
+		rawData.Packages = append(rawData.Packages, rawDataPackagist.Packages...)
 	}
 
 	pRawResults := getRawResults(c)
